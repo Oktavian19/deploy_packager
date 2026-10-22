@@ -8,6 +8,8 @@ class SettingsService {
   static const _keyProjectHistory = 'project_history';
   static const _keyBuildConfigPrefix = 'build_config_';
   static const _keyCleanDestination = 'clean_destination';
+  static const _keyZoomIsAuto = 'zoom_is_auto';
+  static const _keyZoomScale = 'zoom_scale';
   static const _maxHistory = 10;
 
   late final SharedPreferences _prefs;
@@ -106,12 +108,28 @@ class SettingsService {
     await _prefs.setBool(_keyCleanDestination, value);
   }
 
+  /// Whether zoom level is in automatic responsive mode. Defaults to true.
+  bool get zoomIsAuto => _prefs.getBool(_keyZoomIsAuto) ?? true;
+
+  /// Manual zoom scale factor (e.g. 0.85, 1.0). Defaults to 1.0.
+  double get zoomScale => _prefs.getDouble(_keyZoomScale) ?? 1.0;
+
+  /// Save zoom configuration.
+  Future<void> setZoomSettings({required bool isAuto, required double scale}) async {
+    await Future.wait([
+      _prefs.setBool(_keyZoomIsAuto, isAuto),
+      _prefs.setDouble(_keyZoomScale, scale),
+    ]);
+  }
+
   /// Clear all saved settings.
   Future<void> clear() async {
     await clearProjectHistory();
     await _prefs.remove(_keyProjectPath);
     await _prefs.remove(_keyExportPath);
     await _prefs.remove(_keyCleanDestination);
+    await _prefs.remove(_keyZoomIsAuto);
+    await _prefs.remove(_keyZoomScale);
   }
 
   /// Get the build config for a given project path.
