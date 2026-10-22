@@ -118,6 +118,7 @@ class ExportState {
   ExportState copyWith({
     ExportStatus? status,
     String? destinationPath,
+    bool clearDestinationPath = false,
     double? progress,
     ExportResult? result,
     String? errorMessage,
@@ -126,7 +127,9 @@ class ExportState {
   }) {
     return ExportState(
       status: status ?? this.status,
-      destinationPath: destinationPath ?? this.destinationPath,
+      destinationPath: clearDestinationPath
+          ? null
+          : (destinationPath ?? this.destinationPath),
       progress: progress ?? this.progress,
       result: result ?? this.result,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -144,7 +147,7 @@ class ExportNotifier extends StateNotifier<ExportState> {
     final projectPath = ref.read(projectPathProvider);
     final savedPath = projectPath != null
         ? settings.getExportPathForProject(projectPath)
-        : settings.exportPath;
+        : null;
     if (savedPath != null) {
       state = state.copyWith(destinationPath: savedPath);
     }
@@ -158,6 +161,7 @@ class ExportNotifier extends StateNotifier<ExportState> {
     final savedPath = settings.getExportPathForProject(projectPath);
     state = state.copyWith(
       destinationPath: savedPath,
+      clearDestinationPath: savedPath == null,
       status: ExportStatus.idle,
     );
   }

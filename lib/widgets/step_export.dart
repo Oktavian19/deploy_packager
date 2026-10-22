@@ -421,10 +421,11 @@ class StepExport extends ConsumerWidget {
     // Start at the project-specific destination or last used export path
     final projectPath = ref.read(projectPathProvider);
     final currentDest = ref.read(exportProvider).destinationPath;
-    final savedExport = projectPath != null
+    final projectSavedExport = projectPath != null
         ? ref.read(settingsServiceProvider).getExportPathForProject(projectPath)
-        : ref.read(settingsServiceProvider).exportPath;
-    final initialDir = currentDest ?? savedExport;
+        : null;
+    final globalExport = ref.read(settingsServiceProvider).exportPath;
+    final initialDir = currentDest ?? projectSavedExport ?? globalExport;
 
     String? validInitialDir;
     if (initialDir != null && Directory(initialDir).existsSync()) {

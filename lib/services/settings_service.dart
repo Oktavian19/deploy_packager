@@ -44,15 +44,21 @@ class SettingsService {
     await _prefs.setStringList(_keyProjectHistory, history);
   }
 
-  /// Remove a path from the project history.
+  /// Remove a path from the project history and clean up its project-specific settings.
   Future<void> removeFromProjectHistory(String path) async {
     final history = List<String>.from(projectHistory);
     history.remove(path);
     await _prefs.setStringList(_keyProjectHistory, history);
+    await removeExportPathForProject(path);
+    await removeBuildConfigForProject(path);
   }
 
-  /// Clear project history.
+  /// Clear project history and associated per-project settings.
   Future<void> clearProjectHistory() async {
+    for (final path in projectHistory) {
+      await removeExportPathForProject(path);
+      await removeBuildConfigForProject(path);
+    }
     await _prefs.remove(_keyProjectHistory);
   }
 
@@ -66,10 +72,11 @@ class SettingsService {
     await _prefs.setString(_keyExportPath, path);
   }
 
-  /// Get the saved export path for a specific project (with fallback to global exportPath).
+  /// Get the saved export path for a specific project strictly.
+  /// Returns null if this project has no dedicated export path yet.
   String? getExportPathForProject(String projectPath) {
     final key = '$_keyProjectExportPathPrefix${_hashPath(projectPath)}';
-    return _prefs.getString(key) ?? exportPath;
+    return _prefs.getString(key);
   }
 
   /// Save the export path for a specific project and also update the global default.
@@ -77,6 +84,18 @@ class SettingsService {
     final key = '$_keyProjectExportPathPrefix${_hashPath(projectPath)}';
     await _prefs.setString(key, path);
     await setExportPath(path);
+  }
+
+  /// Remove the saved export path for a specific project.
+  Future<void> removeExportPathForProject(String projectPath) async {
+    final key = '$_keyProjectExportPathPrefix${_hashPath(projectPath)}';
+    await _prefs.remove(key);
+  }
+
+  /// Remove the saved build config for a specific project.
+  Future<void> removeBuildConfigForProject(String projectPath) async {
+    final key = '$_keyBuildConfigPrefix${_hashPath(projectPath)}';
+    await _prefs.remove(key);
   }
 
   /// Get the saved clean destination setting.
@@ -89,9 +108,10 @@ class SettingsService {
 
   /// Clear all saved settings.
   Future<void> clear() async {
+    await clearProjectHistory();
     await _prefs.remove(_keyProjectPath);
     await _prefs.remove(_keyExportPath);
-    await _prefs.remove(_keyProjectHistory);
+    await _prefs.remove(_keyCleanDestination);
   }
 
   /// Get the build config for a given project path.
@@ -112,9 +132,19 @@ class SettingsService {
     await _prefs.setString(key, config.toJsonString());
   }
 
-  /// Simple hash for project path keys.
+  /// Normalize a filesystem path by trimming whitespace and trailing slashes.
+  String _normalizePath(String path) {
+    var p = path.trim();
+    while ((p.endsWith('/') || p.endsWith('\\')) && p.length > 1) {
+      p = p.substring(0, p.length - 1);
+    }
+    return p;
+  }
+
+  /// Simple hash for project path keys using normalized path.
   String _hashPath(String path) {
-    final bytes = utf8.encode(path);
+    final normalized = _normalizePath(path);
+    final bytes = utf8.encode(normalized);
     return base64Encode(bytes);
   }
 }
